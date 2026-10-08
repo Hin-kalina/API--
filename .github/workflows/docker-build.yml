@@ -1,19 +1,39 @@
-name: Build and Push Docker Image
+name: Release and Build Docker Image
 
 on:
   push:
     branches: [ main ]
-    tags: [ 'v*.*.*' ]
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   packages: write
-  
-jobs:
-  docker:
-    runs-on: ubuntu-latest
+  issues: write
+  pull-requests: write
 
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    outputs:
+      new_release_published: ${{ steps.semantic.outputs.new_release_published }}
+      new_release_version: ${{ steps.semantic.outputs.new_release_version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Semantic Release
+        id: semantic
+        uses: cycjimmy/semantic-release-action@v4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  docker:
+    needs: release
+    if: needs.release.outputs.new_release_published == 'true'
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -28,22 +48,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/hin-kalina/calc-api
-          tags: |
-            type=ref,event=branch
-            type=semver,pattern={{version}}
-            type=raw,value=latest,enable={{is_default_branch}}
-
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: |
+            ghcr.io/hin-kalina/calc-api:${{ needs.release.outputs.new_release_version }}
+            ghcr.io/hin-kalina/calc-api:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
