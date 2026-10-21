@@ -1,0 +1,7 @@
+rules:
+  - id: python-eval
+    patterns:
+      - pattern: eval(...)
+    message: "Использование eval() опасно и может привести к выполнению произвольного кода."
+    languages: [python]
+    severity: ERROR
