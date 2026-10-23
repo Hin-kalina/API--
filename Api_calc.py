@@ -1,18 +1,16 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-# Инициализация приложения FastAPI
 app = FastAPI(
     title="API Калькулятор",
     description="Высокопроизводительный API для выполнения базовых математических операций",
     version="1.0.0"
 )
 
-# Модель данных для входящего запроса (обеспечивает валидацию)
 class CalculationRequest(BaseModel):
     a: float
     b: float
-    operation: str  # Допустимые значения: add, subtract, multiply, divide
+    operation: str  
 
 @app.post("/calculate", tags=["Вычисления"])
 async def calculate(request: CalculationRequest):
